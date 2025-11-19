@@ -27,6 +27,41 @@ Flowodoro implements a premium, minimalist "Zen" theme:
 
 For complete design documentation, see [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md).
 
+## iOS Background Audio
+
+**CRITICAL**: Flowodoro is configured for persistent background audio playback. The audio stream will **NOT stop** when:
+- Screen locks
+- App is backgrounded
+- Device sleeps
+- User switches to another app
+
+**Configuration**:
+- ✅ `UIBackgroundModes: ["audio"]` enabled in `app.json`
+- ✅ `AVAudioSession` category set to `Playback`
+- ✅ Error handling with 3-attempt retry logic
+- ✅ Detailed logging for debugging
+
+For technical details, see [IOS_BACKGROUND_AUDIO.md](./IOS_BACKGROUND_AUDIO.md).
+
+## TestFlight Deployment
+
+Ready to deploy to TestFlight for beta testing:
+
+```bash
+# Build for TestFlight
+eas build --platform ios --profile testflight
+
+# Submit to TestFlight
+eas submit --platform ios --latest
+```
+
+**Requirements**:
+- Apple Developer Program membership ($99/year)
+- App Store Connect configured
+- Bundle ID: `com.flowodoro.app` (configurable)
+
+For complete deployment guide, see [TESTFLIGHT_DEPLOYMENT.md](./TESTFLIGHT_DEPLOYMENT.md).
+
 ## Quick Start
 
 ### Prerequisites
