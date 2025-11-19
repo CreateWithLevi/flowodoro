@@ -1,13 +1,31 @@
 /**
- * Flowodoro - Autonomous Pomodoro Timer with Dual-Mode Audio Player
+ * Flowodoro - Premium Minimalist Pomodoro Timer
  *
- * This is a demonstration app showing the Flowodoro state machine in action.
+ * "Zen" Theme - Deep Indigo (#1c213c) and White (#FFFFFF)
  */
 
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView } from "react-native";
+import React, { useState } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+  Animated,
+} from "react-native";
 import { useFlowodoroController } from "./hooks/useFlowodoroController";
 import { AppMode } from "./types/state";
+import { ZenTheme } from "./constants/theme";
+import { SegmentedControl } from "./components/SegmentedControl";
+import { CircularProgress } from "./components/CircularProgress";
+import { SettingsModal } from "./components/SettingsModal";
+import {
+  PlayIcon,
+  PauseIcon,
+  SettingsIcon,
+  ResetIcon,
+} from "./components/Icons";
 
 export default function App() {
   const {
@@ -18,133 +36,156 @@ export default function App() {
     switchMode,
     playAudio,
     pauseAudio,
+    setFocusDuration,
+    setRestDuration,
     formatTime,
     isAudioPlaying,
   } = useFlowodoroController();
 
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const fadeAnim = React.useRef(new Animated.Value(1)).current;
+
+  // Handle mode changes with fade animation
+  React.useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [state.currentMode]);
+
+  const handleTimerToggle = () => {
+    if (state.timerIsRunning) {
+      pauseTimer();
+    } else {
+      startTimer();
+    }
+  };
+
+  const handleAudioToggle = () => {
+    if (isAudioPlaying) {
+      pauseAudio();
+    } else {
+      playAudio();
+    }
+  };
+
+  const progress =
+    1 -
+    state.timeRemaining /
+      (state.isFocusCycle
+        ? state.focusDuration * 60
+        : state.restDuration * 60);
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style="auto" />
+      <StatusBar barStyle="light-content" backgroundColor={ZenTheme.colors.background} />
 
-      {/* App Title */}
-      <Text style={styles.title}>Flowodoro</Text>
-      <Text style={styles.subtitle}>Autonomous Pomodoro Timer</Text>
-
-      {/* Current Mode Display */}
-      <View style={styles.modeContainer}>
-        <Text style={styles.modeLabel}>Current Mode:</Text>
-        <Text
-          style={[
-            styles.modeText,
-            state.currentMode === AppMode.FOCUS ? styles.focusMode : styles.relaxMode,
-          ]}
-        >
-          {state.currentMode}
-        </Text>
+      {/* Header - Segmented Control */}
+      <View style={styles.header}>
+        <SegmentedControl
+          segments={[AppMode.FOCUS, AppMode.RELAX]}
+          selectedSegment={state.currentMode}
+          onSegmentChange={(mode) => switchMode(mode)}
+        />
       </View>
 
-      {/* Cycle Indicator */}
-      <View style={styles.cycleContainer}>
-        <Text style={styles.cycleLabel}>Active Cycle:</Text>
-        <Text style={styles.cycleText}>
-          {state.isFocusCycle ? "FOCUS" : "REST"}
-        </Text>
-      </View>
+      {/* Center Stage - Conditional Rendering */}
+      <Animated.View style={[styles.centerStage, { opacity: fadeAnim }]}>
+        {state.currentMode === AppMode.FOCUS ? (
+          // FOCUS MODE: Circular Progress Timer
+          <View style={styles.focusContainer}>
+            {/* Settings Icon - Top Right */}
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={() => setSettingsVisible(true)}
+              activeOpacity={0.7}
+            >
+              <SettingsIcon size={ZenTheme.icons.md} />
+            </TouchableOpacity>
 
-      {/* Timer Display */}
-      <View style={styles.timerContainer}>
-        <Text style={styles.timerText}>{formatTime(state.timeRemaining)}</Text>
-        <Text style={styles.timerStatus}>
-          {state.timerIsRunning ? "Running" : "Paused"}
-        </Text>
-      </View>
+            {/* Circular Progress Bar */}
+            <CircularProgress
+              progress={progress}
+              size={280}
+              strokeWidth={8}
+              onPress={handleTimerToggle}
+            >
+              <View style={styles.timerContent}>
+                <Text style={styles.timerText}>{formatTime(state.timeRemaining)}</Text>
+                <View style={styles.timerIcon}>
+                  {state.timerIsRunning ? (
+                    <PauseIcon size={ZenTheme.icons.lg} />
+                  ) : (
+                    <PlayIcon size={ZenTheme.icons.lg} />
+                  )}
+                </View>
+                <Text style={styles.cycleLabel}>
+                  {state.isFocusCycle ? "Focus Time" : "Rest Time"}
+                </Text>
+              </View>
+            </CircularProgress>
 
-      {/* Timer Controls */}
-      <View style={styles.controlsContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.startButton]}
-          onPress={startTimer}
-          disabled={state.timerIsRunning}
-        >
-          <Text style={styles.buttonText}>Start</Text>
-        </TouchableOpacity>
+            {/* Reset Button - Bottom Center */}
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={resetTimer}
+              activeOpacity={0.7}
+            >
+              <ResetIcon size={ZenTheme.icons.md} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          // RELAX MODE: Minimal Audio Control
+          <View style={styles.relaxContainer}>
+            <Text style={styles.relaxTitle}>Relax Mode</Text>
+            <Text style={styles.relaxSubtitle}>Take a break, listen to music</Text>
 
-        <TouchableOpacity
-          style={[styles.button, styles.pauseButton]}
-          onPress={pauseTimer}
-          disabled={!state.timerIsRunning}
-        >
-          <Text style={styles.buttonText}>Pause</Text>
-        </TouchableOpacity>
+            {/* Large Play/Pause Button */}
+            <TouchableOpacity
+              style={styles.relaxAudioButton}
+              onPress={handleAudioToggle}
+              activeOpacity={0.8}
+            >
+              {isAudioPlaying ? (
+                <PauseIcon size={ZenTheme.icons.xl * 2} />
+              ) : (
+                <PlayIcon size={ZenTheme.icons.xl * 2} />
+              )}
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.button, styles.resetButton]}
-          onPress={resetTimer}
-        >
-          <Text style={styles.buttonText}>Reset</Text>
-        </TouchableOpacity>
-      </View>
+            <Text style={styles.audioStatus}>
+              {isAudioPlaying ? "Playing" : "Paused"}
+            </Text>
 
-      {/* Mode Switching */}
-      <View style={styles.modeSwitchContainer}>
-        <Text style={styles.sectionTitle}>Switch Mode:</Text>
-        <View style={styles.modeSwitchButtons}>
-          <TouchableOpacity
-            style={[
-              styles.button,
-              styles.modeButton,
-              state.currentMode === AppMode.FOCUS && styles.activeMode,
-            ]}
-            onPress={() => switchMode(AppMode.FOCUS)}
-          >
-            <Text style={styles.buttonText}>Focus</Text>
-          </TouchableOpacity>
+            {/* Settings access in relax mode */}
+            <TouchableOpacity
+              style={styles.relaxSettingsButton}
+              onPress={() => setSettingsVisible(true)}
+              activeOpacity={0.7}
+            >
+              <SettingsIcon size={ZenTheme.icons.md} />
+              <Text style={styles.relaxSettingsText}>Settings</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </Animated.View>
 
-          <TouchableOpacity
-            style={[
-              styles.button,
-              styles.modeButton,
-              state.currentMode === AppMode.RELAX && styles.activeMode,
-            ]}
-            onPress={() => switchMode(AppMode.RELAX)}
-          >
-            <Text style={styles.buttonText}>Relax</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Audio Controls */}
-      <View style={styles.audioContainer}>
-        <Text style={styles.sectionTitle}>Audio Controls:</Text>
-        <Text style={styles.audioStatus}>
-          Status: {isAudioPlaying ? "Playing" : "Paused"}
-        </Text>
-        <View style={styles.audioButtons}>
-          <TouchableOpacity
-            style={[styles.button, styles.audioButton]}
-            onPress={playAudio}
-          >
-            <Text style={styles.buttonText}>Play</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.audioButton]}
-            onPress={pauseAudio}
-          >
-            <Text style={styles.buttonText}>Pause</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* State Debug Info */}
-      <View style={styles.debugContainer}>
-        <Text style={styles.debugTitle}>State Machine Debug:</Text>
-        <Text style={styles.debugText}>Focus Duration: {state.focusDuration}m</Text>
-        <Text style={styles.debugText}>Rest Duration: {state.restDuration}m</Text>
-        <Text style={styles.debugText}>
-          Stream: {state.streamURL.substring(0, 40)}...
-        </Text>
-      </View>
+      {/* Settings Modal */}
+      <SettingsModal
+        visible={settingsVisible}
+        onClose={() => setSettingsVisible(false)}
+        focusDuration={state.focusDuration}
+        restDuration={state.restDuration}
+        onFocusDurationChange={setFocusDuration}
+        onRestDurationChange={setRestDuration}
+      />
     </SafeAreaView>
   );
 }
@@ -152,156 +193,113 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a1a2e",
-    padding: 20,
+    backgroundColor: ZenTheme.colors.background,
   },
-  title: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#eee",
-    textAlign: "center",
-    marginTop: 20,
+  header: {
+    paddingHorizontal: ZenTheme.spacing.xl,
+    paddingTop: ZenTheme.spacing.lg,
+    paddingBottom: ZenTheme.spacing.xl,
   },
-  subtitle: {
-    fontSize: 16,
-    color: "#aaa",
-    textAlign: "center",
-    marginBottom: 30,
-  },
-  modeContainer: {
+  centerStage: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    paddingHorizontal: ZenTheme.spacing.lg,
   },
-  modeLabel: {
-    fontSize: 14,
-    color: "#aaa",
-    marginBottom: 5,
-  },
-  modeText: {
-    fontSize: 28,
-    fontWeight: "bold",
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  focusMode: {
-    color: "#ff6b6b",
-    backgroundColor: "#ff6b6b22",
-  },
-  relaxMode: {
-    color: "#4ecdc4",
-    backgroundColor: "#4ecdc422",
-  },
-  cycleContainer: {
+
+  // FOCUS MODE STYLES
+  focusContainer: {
     alignItems: "center",
-    marginBottom: 30,
+    justifyContent: "center",
+    width: "100%",
   },
-  cycleLabel: {
-    fontSize: 12,
-    color: "#888",
+  settingsButton: {
+    position: "absolute",
+    top: -80,
+    right: ZenTheme.spacing.xl,
+    padding: ZenTheme.spacing.sm,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: ZenTheme.borderRadius.circle,
   },
-  cycleText: {
-    fontSize: 18,
-    color: "#eee",
-    fontWeight: "600",
-  },
-  timerContainer: {
+  timerContent: {
     alignItems: "center",
-    marginBottom: 40,
+    justifyContent: "center",
   },
   timerText: {
-    fontSize: 72,
-    fontWeight: "bold",
-    color: "#eee",
+    fontSize: ZenTheme.fontSize.timer,
+    fontWeight: ZenTheme.fontWeight.light,
+    color: ZenTheme.colors.text,
     fontFamily: "monospace",
+    letterSpacing: -2,
   },
-  timerStatus: {
-    fontSize: 16,
-    color: "#888",
-    marginTop: 10,
+  timerIcon: {
+    marginTop: ZenTheme.spacing.sm,
+    marginBottom: ZenTheme.spacing.xs,
   },
-  controlsContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 15,
-    marginBottom: 30,
-  },
-  button: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    minWidth: 90,
-    alignItems: "center",
-  },
-  startButton: {
-    backgroundColor: "#5cb85c",
-  },
-  pauseButton: {
-    backgroundColor: "#f0ad4e",
+  cycleLabel: {
+    fontSize: ZenTheme.fontSize.sm,
+    color: ZenTheme.colors.textSecondary,
+    fontWeight: ZenTheme.fontWeight.medium,
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
   resetButton: {
-    backgroundColor: "#d9534f",
+    position: "absolute",
+    bottom: -80,
+    padding: ZenTheme.spacing.sm,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: ZenTheme.borderRadius.circle,
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  modeSwitchContainer: {
-    marginBottom: 30,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    color: "#aaa",
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  modeSwitchButtons: {
-    flexDirection: "row",
+
+  // RELAX MODE STYLES
+  relaxContainer: {
+    alignItems: "center",
     justifyContent: "center",
-    gap: 15,
+    width: "100%",
   },
-  modeButton: {
-    backgroundColor: "#444",
-    minWidth: 100,
+  relaxTitle: {
+    fontSize: ZenTheme.fontSize.xxxl,
+    fontWeight: ZenTheme.fontWeight.light,
+    color: ZenTheme.colors.text,
+    marginBottom: ZenTheme.spacing.sm,
   },
-  activeMode: {
-    backgroundColor: "#667eea",
+  relaxSubtitle: {
+    fontSize: ZenTheme.fontSize.md,
+    color: ZenTheme.colors.textSecondary,
+    marginBottom: ZenTheme.spacing.xxxl,
   },
-  audioContainer: {
-    marginBottom: 30,
+  relaxAudioButton: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderWidth: 2,
+    borderColor: ZenTheme.colors.text,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: ZenTheme.spacing.lg,
   },
   audioStatus: {
-    fontSize: 14,
-    color: "#888",
-    textAlign: "center",
-    marginBottom: 10,
+    fontSize: ZenTheme.fontSize.md,
+    color: ZenTheme.colors.textSecondary,
+    marginTop: ZenTheme.spacing.md,
+    fontWeight: ZenTheme.fontWeight.medium,
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
-  audioButtons: {
+  relaxSettingsButton: {
     flexDirection: "row",
-    justifyContent: "center",
-    gap: 15,
+    alignItems: "center",
+    marginTop: ZenTheme.spacing.xxxl,
+    paddingVertical: ZenTheme.spacing.sm,
+    paddingHorizontal: ZenTheme.spacing.lg,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: ZenTheme.borderRadius.pill,
+    gap: ZenTheme.spacing.xs,
   },
-  audioButton: {
-    backgroundColor: "#764ba2",
-    minWidth: 100,
-  },
-  debugContainer: {
-    marginTop: 20,
-    padding: 15,
-    backgroundColor: "#0f0f1e",
-    borderRadius: 8,
-  },
-  debugTitle: {
-    fontSize: 14,
-    color: "#888",
-    marginBottom: 8,
-    fontWeight: "600",
-  },
-  debugText: {
-    fontSize: 12,
-    color: "#666",
-    fontFamily: "monospace",
-    marginBottom: 4,
+  relaxSettingsText: {
+    fontSize: ZenTheme.fontSize.md,
+    color: ZenTheme.colors.text,
+    fontWeight: ZenTheme.fontWeight.medium,
   },
 });

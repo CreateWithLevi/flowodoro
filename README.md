@@ -8,10 +8,24 @@ A robust iOS app built with Expo/React Native that implements an autonomous Pomo
 
 - **Autonomous Timer**: Automatically transitions between focus and rest cycles
 - **Dual-Mode Audio**: Music plays during focus, silence during rest
+- **Premium Design**: "Zen" theme with deep indigo (#1c213c) and white aesthetics
 - **State Machine Architecture**: Robust, predictable state management
 - **Type-Safe**: Built with TypeScript for reliability
 - **Background Playback**: Audio continues in background
 - **Manual Controls**: Full control over timer and audio
+- **Smooth Animations**: 300ms fade transitions for calming UX
+
+## Design System
+
+Flowodoro implements a premium, minimalist "Zen" theme:
+
+- **Color Palette**: Deep Indigo (#1c213c) background with Pure White (#FFFFFF) text
+- **Typography**: Clean sans-serif with lightweight fonts for large displays
+- **Animations**: Smooth 300ms opacity fades for all transitions
+- **Conditional UI**: Different layouts for FOCUS (circular timer) and RELAX (audio player) modes
+- **Accessibility**: AAA color contrast, 44pt minimum touch targets
+
+For complete design documentation, see [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md).
 
 ## Quick Start
 
